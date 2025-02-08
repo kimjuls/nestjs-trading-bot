@@ -13,7 +13,7 @@
 ## 주요 기능
 
 - 자동 롱/숏 진입 및 청산
-- OKX API와 실시간 WebSocket 통신
+- API와 실시간 WebSocket 통신
 - 다양한 거래 전략으로 확장할 수 있는 객체 지향 설계
 - 백테스팅 및 리스크 관리 기능
 
@@ -34,7 +34,7 @@ pnpm run start
 📂 trading-bot-project
 ├── 📂 src
 │   ├── 📂 config              # 환경 변수 및 설정 관련
-│   ├── 📂 exchange            # OKX API 연동 (주문, 조회 등)     - 핵심모듈
+│   ├── 📂 exchange            # API 연동 (주문, 조회 등)     - 핵심모듈
 │   ├── 📂 strategy            # 트레이딩 전략 (시그널, 백테스트 등)  - 핵심모듈
 │   ├── 📂 risk                # 리스크 관리 (스탑로스, 레버리지 등)  - 핵심모듈
 │   ├── 📂 execution           # 주문 실행 엔진                  - 핵심모듈
@@ -51,11 +51,11 @@ pnpm run start
 #### **1️⃣ `config` (설정)**
 
 - `.env` 파일을 기반으로 API Key, 비밀키, 거래소 설정 등을 로드
-- OKX API 키, 레버리지, 기본 설정값 관리
+- API 키, 레버리지, 기본 설정값 관리
 
 #### **2️⃣ `exchange` (거래소 API 연동)**
 
-- OKX REST API, WebSocket 연동
+- REST API, WebSocket 연동
 - 주문 실행 (`placeOrder`), 포지션 조회 (`getPosition`)
 - 실시간 가격 스트리밍
 
@@ -87,7 +87,7 @@ pnpm run start
 1. `exchange`에서 **실시간 가격 데이터**를 WebSocket으로 수신
 2. `strategy`에서 가격 변화를 분석하고 **매매 시그널 생성**
 3. `risk` 모듈에서 주문 크기, 스탑로스 설정 후 검토
-4. `execution`에서 **OKX API를 통해 주문 실행**
+4. `execution`에서 **API를 통해 주문 실행**
 5. `monitoring`에서 주문 내역 기록 및 텔레그램/디스코드 알림
 
 ## 트레이딩 전략 (Trading Strategies)

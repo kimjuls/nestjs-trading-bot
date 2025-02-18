@@ -108,3 +108,4 @@ RSI 기반 과매수/과매도 탐지 기능 포함.)
 - [ ] 트랜잭션 로그 저장을 위해 PostgreSQL, MongoDB, Redis 등의 DB 고려
 - [ ] 비동기 처리: 실시간 데이터는 WebSocket + RxJS로 핸들링
 - [ ] 테스트: Jest 기반으로 백테스트 및 유닛 테스트
+- [ ] Golang Migration

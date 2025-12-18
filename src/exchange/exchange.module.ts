@@ -1,8 +1,13 @@
 import { Module } from '@nestjs/common';
+import { BinanceMarketStream } from './infrastructure/binance.market.stream';
 
 @Module({
-  imports: [],
-  providers: [],
-  exports: [],
+  providers: [
+    {
+      provide: 'MarketStream',
+      useClass: BinanceMarketStream,
+    },
+  ],
+  exports: ['MarketStream'],
 })
 export class ExchangeModule {}

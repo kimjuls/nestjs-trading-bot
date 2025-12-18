@@ -1,4 +1,8 @@
 export class Candle {
+  symbol: string;
+  interval: string;
+  isFinal: boolean;
+
   /**
    * Opening price of the interval.
    */

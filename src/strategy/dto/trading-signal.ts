@@ -1,9 +1,10 @@
+import { TradingAction } from '../enums/trading-action.enum';
+
 export class TradingSignal {
   /**
-   * The action to take (e.g. 'BUY', 'SELL', 'HOLD', 'CLOSE').
-   * TODO: Define enum for actions.
+   * The action to take (e.g. 'ENTER_LONG', 'EXIT_LONG').
    */
-  action: string;
+  action: TradingAction;
 
   /**
    * The price at which the signal was generated.

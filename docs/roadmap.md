@@ -1,5 +1,10 @@
 # Roadmap & Considerations
 
+## To Do
+
+- [ ] @architecture.md에 있는 구성요소들에 대한 세부 설계 문서가 있어야 agent가 이해할듯. 구성요소들에 대한 세부 문서 생성 필요
+- [ ] 백테스팅 방법 고민
+
 ## 추후 고려 사항 (Further Consideration)
 
 프로젝트 발전 방향 및 기술적 개선 사항입니다.

@@ -8,6 +8,7 @@ import {
   OrderSide,
   OrderType,
 } from '../../exchange/dto/order.dto';
+import { NotificationService } from '../../monitoring/domain/notification.service.interface';
 
 @Injectable()
 export class SimpleExecutionService implements ExecutionService {
@@ -16,6 +17,8 @@ export class SimpleExecutionService implements ExecutionService {
 
   constructor(
     @Inject('ExchangeClient') private readonly exchangeClient: ExchangeClient,
+    @Inject('NotificationService')
+    private readonly notificationService: NotificationService,
   ) {}
 
   async execute(signal: TradeSignal): Promise<Order> {
@@ -36,6 +39,12 @@ export class SimpleExecutionService implements ExecutionService {
     try {
       const order = await this.exchangeClient.createOrder(orderDto);
       this.logger.log(`Order placed successfully: ${order.id}`);
+
+      // Send notification asynchronously
+      this.sendNotification(order).catch((err) =>
+        this.logger.error(`Failed to send notification: ${err.message}`),
+      );
+
       return order;
     } catch (error) {
       this.logger.error(`Failed to execute order: ${error.message}`, error);
@@ -56,5 +65,14 @@ export class SimpleExecutionService implements ExecutionService {
       default:
         throw new Error(`Unknown signal type: ${type}`);
     }
+  }
+  private async sendNotification(order: Order) {
+    const positions = await this.exchangeClient.getPositions();
+    const balances = await this.exchangeClient.getBalance();
+    await this.notificationService.sendOrderExecutionNotification(
+      order,
+      positions,
+      balances,
+    );
   }
 }

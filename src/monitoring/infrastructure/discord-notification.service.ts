@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   NotificationService,
@@ -8,6 +8,7 @@ import { TradeAlertDto } from '../dto/trade-alert.dto';
 import { Position } from '../../exchange/dto/position.dto';
 import { Balance } from '../../exchange/dto/balance.dto';
 import { Order } from '../../exchange/dto/order.dto';
+import { RiskConfig } from '../../risk/domain/risk.config';
 
 @Injectable()
 export class DiscordNotificationService
@@ -16,12 +17,70 @@ export class DiscordNotificationService
   private readonly logger = new Logger(DiscordNotificationService.name);
   private webhookUrl: string | undefined;
 
-  constructor(private configService: ConfigService) {
+  constructor(
+    private configService: ConfigService,
+    @Inject('RiskConfig') private riskConfig: RiskConfig,
+  ) {
     this.webhookUrl = this.configService.get<string>('DISCORD_WEBHOOK_URL');
   }
 
   async onModuleInit() {
+    this.logger.log(`Risk Config Loaded: ${JSON.stringify(this.riskConfig)}`);
     await this.sendMessage('🚀 Trading Bot Started', NotificationLevel.Success);
+
+    // 추가 정보 전송을 위한 별도 호출 (sendMessage는 단순 텍스트, sendStartupNotification이 정보 포함)
+    // 기존 코드 구조상 sendStartupNotification은 positions, balances를 받는데,
+    // 여기선 초기 상태(빈 값)와 함께 Risk Config를 보내는게 좋음.
+    // 일단 sendMessage 내에 Risk Config를 포함시키기 위해 sendMessage 메서드를 수정하거나,
+    // 여기서 별도로 Risk Info를 보내는 메서드를 호출.
+    // 사용자 요청은 "앱 시작 시 ... 포함해줘" 이므로 sendStartupNotification을 호출하거나
+    // sendMessage 내용을 확장하는 것이 좋음.
+    // 기존 sendMessage는 단순함. sendStartupNotification을 호출하도록 변경.
+    // 하지만 positions/balances 데이터가 이 시점엔 없음.
+    // 따라서 sendMessage에 embed 필드를 추가할 수 있도록 오버로딩하거나,
+    // onModuleInit에서는 Risk Config 정보만 담은 별도 메시지를 보냄.
+
+    await this.sendRiskConfigInfo();
+  }
+
+  private async sendRiskConfigInfo() {
+    if (!this.webhookUrl) return;
+
+    const fields = [
+      {
+        name: 'Max Daily Loss',
+        value: `${(this.riskConfig.maxDailyLossPercent * 100).toFixed(1)}%`,
+        inline: true,
+      },
+      {
+        name: 'Max Leverage',
+        value: `${this.riskConfig.maxLeverage}x`,
+        inline: true,
+      },
+      {
+        name: 'Risk Per Trade',
+        value: `${(this.riskConfig.riskPerTradePercent * 100).toFixed(1)}%`,
+        inline: true,
+      },
+      {
+        name: 'Min Reward/Risk',
+        value: `${this.riskConfig.rewardToRiskRatio}`,
+        inline: true,
+      },
+    ];
+
+    const payload = {
+      embeds: [
+        {
+          title: '🛡️ Risk Configuration Applied',
+          color: this.getColorByLevel(NotificationLevel.Info),
+          fields: fields,
+          timestamp: new Date().toISOString(),
+        },
+      ],
+    };
+
+    await this.sendToDiscord(payload);
   }
 
   async sendMessage(

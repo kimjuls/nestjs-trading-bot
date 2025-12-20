@@ -3,10 +3,11 @@ import { APP_FILTER } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { DiscordNotificationService } from './infrastructure/discord-notification.service';
 import { GlobalExceptionFilter } from './infrastructure/global-exception.filter';
+import { RiskModule } from '../risk/risk.module';
 
 @Global()
 @Module({
-  imports: [ConfigModule],
+  imports: [ConfigModule, RiskModule],
   providers: [
     {
       provide: 'NotificationService',

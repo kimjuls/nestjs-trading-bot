@@ -12,6 +12,7 @@ import {
   OrderStatus,
   OrderType,
 } from '../../exchange/dto/order.dto';
+import { RiskConfig } from '../../risk/domain/risk.config';
 
 describe('DiscordNotificationService', () => {
   let service: DiscordNotificationService;
@@ -20,6 +21,14 @@ describe('DiscordNotificationService', () => {
   // Mock fetch
   const mockFetch = jest.fn();
   global.fetch = mockFetch;
+
+  // Mock RiskConfig
+  const mockRiskConfig: RiskConfig = {
+    maxDailyLossPercent: 0.03,
+    maxLeverage: 5,
+    riskPerTradePercent: 0.01,
+    rewardToRiskRatio: 1.5,
+  };
 
   beforeEach(async () => {
     mockFetch.mockClear();
@@ -39,6 +48,10 @@ describe('DiscordNotificationService', () => {
               .mockReturnValue('https://discord.com/api/webhooks/test'),
           },
         },
+        {
+          provide: 'RiskConfig',
+          useValue: mockRiskConfig,
+        },
       ],
     }).compile();
 
@@ -50,6 +63,28 @@ describe('DiscordNotificationService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  describe('onModuleInit', () => {
+    it('should log and send startup message with risk info', async () => {
+      const logSpy = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+      await service.onModuleInit();
+
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Risk Config Loaded'),
+      );
+      expect(mockFetch).toHaveBeenCalledTimes(2); // Startup Msg + Risk Info Msg
+
+      // Check Risk Info Msg
+      const callArgs = mockFetch.mock.calls[1];
+      const body = JSON.parse(callArgs[1].body);
+      expect(body.embeds[0].title).toContain('Risk Configuration Applied');
+      expect(body.embeds[0].fields).toContainEqual(
+        expect.objectContaining({ name: 'Max Leverage', value: '5x' }),
+      );
+
+      logSpy.mockRestore();
+    });
   });
 
   describe('sendMessage', () => {
@@ -91,6 +126,10 @@ describe('DiscordNotificationService', () => {
             useValue: {
               get: jest.fn().mockReturnValue(null),
             },
+          },
+          {
+            provide: 'RiskConfig',
+            useValue: mockRiskConfig,
           },
         ],
       }).compile();

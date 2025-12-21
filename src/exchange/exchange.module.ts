@@ -21,8 +21,9 @@ import { PaperExchangeClient } from '../paper-trading/application/paper.exchange
         binanceClient: BinanceExchangeClient,
         paperClient: PaperExchangeClient,
       ) => {
-        const isPaper = config.get('PAPER_TRADING_ENABLED') === 'true';
-        return isPaper ? paperClient : binanceClient;
+        const nodeEnv = config.get('NODE_ENV');
+        const isProduction = nodeEnv === 'production';
+        return isProduction ? binanceClient : paperClient;
       },
     },
   ],

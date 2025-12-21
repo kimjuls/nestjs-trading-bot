@@ -11,8 +11,6 @@ const mockConfigService = {
         return 'test-api-key';
       case 'BINANCE_API_SECRET':
         return 'test-api-secret';
-      case 'BINANCE_USE_TESTNET':
-        return 'true';
       default:
         return null;
     }

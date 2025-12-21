@@ -50,17 +50,40 @@ BINANCE_SECRET_KEY=your_secret_key
 # ... 기타 설정
 ```
 
-### 실행 (Running the app)
+### 실행 가이드 (Execution Guide)
+
+#### 1. 백테스팅 (Backtesting)
+
+과거 데이터를 기반으로 전략의 성과를 검증합니다.
 
 ```bash
-# 개발 모드 실행
-pnpm run start
+# 기본 설정으로 실행 (지난 1개월)
+pnpm run backtest
 
-# Watch 모드 (코드 변경 감지)
-pnpm run start:dev
+# 커스텀 설정으로 실행
+BACKTEST_SYMBOL=ETHUSDT \
+BACKTEST_INTERVAL=1h \
+BACKTEST_START_DATE=2024-01-01 \
+BACKTEST_END_DATE=2024-06-01 \
+pnpm run backtest
+```
 
+#### 2. 모의 투자 (Paper Trading)
+
+실시간 시장 데이터를 사용하지만 가상 자산으로 거래를 시뮬레이션합니다. (구현 예정)
+
+```bash
+# 모의 투자 모드 실행 (환경 변수 필요)
+APP_MODE=PAPER pnpm run start:prod
+```
+
+#### 3. 실전 투자 (Production)
+
+실제 자산을 사용하여 거래소에서 매매를 수행합니다. **주의: 실제 금전적 손실이 발생할 수 있습니다.**
+
+```bash
 # 프로덕션 모드 실행
-pnpm run start:prod
+NODE_ENV=production pnpm run start:prod
 ```
 
 ## 🛠 기술 스택 (Tech Stack)

@@ -23,10 +23,12 @@ export class BinanceMarketStream
 
   async onModuleInit() {
     await this.connect();
+    this.logger.log('Binance Market Stream initialized');
   }
 
   async onModuleDestroy() {
     await this.disconnect();
+    this.logger.log('Binance Market Stream destroyed');
   }
 
   async connect(): Promise<void> {

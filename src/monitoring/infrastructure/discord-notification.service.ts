@@ -26,7 +26,6 @@ export class DiscordNotificationService
 
   async onModuleInit() {
     this.logger.log(`Risk Config Loaded: ${JSON.stringify(this.riskConfig)}`);
-    await this.sendMessage('🚀 Trading Bot Started', NotificationLevel.Success);
 
     // 추가 정보 전송을 위한 별도 호출 (sendMessage는 단순 텍스트, sendStartupNotification이 정보 포함)
     // 기존 코드 구조상 sendStartupNotification은 positions, balances를 받는데,

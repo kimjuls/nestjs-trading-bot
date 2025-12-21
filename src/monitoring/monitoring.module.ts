@@ -11,7 +11,7 @@ import { RiskModule } from '../risk/risk.module';
   providers: [
     {
       provide: 'NotificationService',
-      useClass: DiscordNotificationService,
+      useExisting: DiscordNotificationService,
     },
     DiscordNotificationService,
     {

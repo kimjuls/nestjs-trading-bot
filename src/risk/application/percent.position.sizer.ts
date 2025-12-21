@@ -1,10 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { PositionSizer } from '../domain/position.sizer';
 import { RiskConfig } from '../domain/risk.config';
 
 @Injectable()
 export class PercentPositionSizer implements PositionSizer {
-  constructor(private readonly config: RiskConfig) {}
+  constructor(@Inject('RiskConfig') private readonly config: RiskConfig) {}
 
   calculate(equity: number, entryPrice: number, stopLossPrice: number): number {
     const priceDiff = Math.abs(entryPrice - stopLossPrice);

@@ -74,7 +74,7 @@ pnpm run backtest
 
 ```bash
 # 모의 투자 모드 실행 (환경 변수 필요)
-APP_MODE=PAPER pnpm run start:prod
+pnpm run start
 ```
 
 #### 3. 실전 투자 (Production)
@@ -82,8 +82,8 @@ APP_MODE=PAPER pnpm run start:prod
 실제 자산을 사용하여 거래소에서 매매를 수행합니다. **주의: 실제 금전적 손실이 발생할 수 있습니다.**
 
 ```bash
-# 프로덕션 모드 실행
-NODE_ENV=production pnpm run start:prod
+# 프로덕션 모드 실행 (NODE_ENV=production 필수)
+pnpm run start:prod
 ```
 
 ## 🛠 기술 스택 (Tech Stack)

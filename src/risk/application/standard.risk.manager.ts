@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Inject } from '@nestjs/common';
 import {
   RiskManager,
   AccountBalance,
@@ -11,8 +11,8 @@ import { OrderRequest, OrderSide } from '../domain/structures';
 @Injectable()
 export class StandardRiskManager implements RiskManager {
   constructor(
-    private readonly config: RiskConfig,
-    private readonly positionSizer: PositionSizer,
+    @Inject('RiskConfig') private readonly config: RiskConfig,
+    @Inject('PositionSizer') private readonly positionSizer: PositionSizer,
   ) {}
 
   async evaluate(

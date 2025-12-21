@@ -17,45 +17,65 @@ export class MacdRsiStrategy implements TradeStrategy {
     period: 14,
   };
 
-  async analyze(candles: Candle[]): Promise<TradingSignal> {
-    const closePrices = candles.map((c) => c.close);
+  private macd: MACD;
+  private rsi: RSI;
+  private lastProcessedTime = 0;
 
-    // Need enough data for indicators
-    // MACD needs at least slowPeriod + signalPeriod - 1?
-    // Safer to check for a reasonable amount.
-    if (candles.length < 50) {
-      return this.createSignal(TradingAction.Hold, candles[candles.length - 1]);
-    }
-
-    const macdResult = MACD.calculate({
-      values: closePrices,
+  async onInit(): Promise<void> {
+    this.macd = new MACD({
+      values: [],
       ...this.macdInput,
     });
-
-    const rsiResult = RSI.calculate({
-      values: closePrices,
+    this.rsi = new RSI({
+      values: [],
       ...this.rsiInput,
     });
+    this.lastProcessedTime = 0;
+  }
 
-    // We need the last two MACD values to check for crossover
-    // macdResult is an array of MACDOutput: { MACD?: number, signal?: number, histogram?: number }
-    // The result array might be shorter than candles because of the lookback period.
-    // We strictly look at the LATEST completed candle (last index).
-
-    const lastIndex = macdResult.length - 1;
-    const prevIndex = macdResult.length - 2;
-
-    if (lastIndex < 1 || rsiResult.length < 1) {
-      return this.createSignal(TradingAction.Hold, candles[candles.length - 1]);
+  async analyze(candles: Candle[]): Promise<TradingSignal> {
+    if (!this.macd || !this.rsi) {
+      await this.onInit();
     }
 
-    const currentMacd = macdResult[lastIndex];
-    const prevMacd = macdResult[prevIndex];
+    // Incremental Update Logic
+    // Find candles that have not been processed yet
+    const newCandles = candles.filter(
+      (c) => c.timestamp > this.lastProcessedTime,
+    );
 
-    // RSI array length might differ slightly depending on calculation start
-    // We want the RSI corresponding to the SAME time as currentMacd.
-    // Usually technicalindicators aligns results. Let's assume the last element is the latest.
-    const currentRsi = rsiResult[rsiResult.length - 1];
+    if (newCandles.length > 0) {
+      for (const candle of newCandles) {
+        this.macd.nextValue(candle.close);
+        this.rsi.nextValue(candle.close);
+      }
+      this.lastProcessedTime = newCandles[newCandles.length - 1].timestamp;
+    }
+
+    const latestCandle = candles[candles.length - 1];
+
+    // Need enough data
+    // MACD result might be undefined initially
+    // We can access results via this.macd.getResult() which might return the full array?
+    // No, technicalindicators usually stores result.
+    // Actually, checking library behavior: classes usually behave as streams but 'getResult()' isn't always standard or efficient if it returns full array.
+    // But usually we just need the LAST result.
+    // Warning: `technicalindicators` stateful classes store result in `result` property (array).
+    // Accessing the last element of the array is O(1).
+
+    const macdResults = this.macd.getResult();
+    const rsiResults = this.rsi.getResult();
+
+    const lastIndex = macdResults.length - 1;
+    const prevIndex = macdResults.length - 2;
+
+    if (lastIndex < 1 || rsiResults.length < 1) {
+      return this.createSignal(TradingAction.Hold, latestCandle);
+    }
+
+    const currentMacd = macdResults[lastIndex];
+    const prevMacd = macdResults[prevIndex];
+    const currentRsi = rsiResults[rsiResults.length - 1];
 
     if (
       !currentMacd ||
@@ -65,19 +85,17 @@ export class MacdRsiStrategy implements TradeStrategy {
       prevMacd.MACD === undefined ||
       prevMacd.signal === undefined
     ) {
-      return this.createSignal(TradingAction.Hold, candles[candles.length - 1]);
+      return this.createSignal(TradingAction.Hold, latestCandle);
     }
 
     // Check Crossovers
-    // Golden Cross: Previous MACD < Previous Signal AND Current MACD > Current Signal
+    // Golden Cross: Previous MACD <= Previous Signal AND Current MACD > Current Signal
     const isGoldenCross =
       prevMacd.MACD <= prevMacd.signal && currentMacd.MACD > currentMacd.signal;
 
-    // Dead Cross: Previous MACD > Previous Signal AND Current MACD < Current Signal
+    // Dead Cross: Previous MACD >= Previous Signal AND Current MACD < Current Signal
     const isDeadCross =
       prevMacd.MACD >= prevMacd.signal && currentMacd.MACD < currentMacd.signal;
-
-    const latestCandle = candles[candles.length - 1];
 
     // Logic 1: Long Entry
     // MACD Golden Cross AND RSI < 70
@@ -99,8 +117,7 @@ export class MacdRsiStrategy implements TradeStrategy {
       });
     }
 
-    // Logic 3: Long Exit (Trend Reversal)
-    // MACD Dead Cross
+    // Logic 3: Long Exit
     if (isDeadCross) {
       return this.createSignal(TradingAction.ExitLong, latestCandle, {
         reason: 'MACD Dead Cross',
@@ -109,8 +126,7 @@ export class MacdRsiStrategy implements TradeStrategy {
       });
     }
 
-    // Logic 4: Short Exit (Trend Reversal)
-    // MACD Golden Cross
+    // Logic 4: Short Exit
     if (isGoldenCross) {
       return this.createSignal(TradingAction.ExitShort, latestCandle, {
         reason: 'MACD Golden Cross',

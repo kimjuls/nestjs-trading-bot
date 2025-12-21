@@ -65,7 +65,11 @@ export class BacktestEngine {
     // But for now, let's implement the loop as per design.
 
     for (let i = 0; i < candles.length; i++) {
-      const window = candles.slice(0, i + 1); // This is slow O(N^2), but safe for now.
+      // Optimization: Sliding window to avoid O(N^2) copying and calculation
+      // Keep enough history for indicators to converge (e.g. EMA)
+      const lookback = 500;
+      const start = Math.max(0, i + 1 - lookback);
+      const window = candles.slice(start, i + 1);
       // To optimize later, we can check if strategy allows just receiving the new candle + buffer.
 
       const currentCandle = candles[i];

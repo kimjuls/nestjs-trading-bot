@@ -25,6 +25,12 @@ describe('SimpleExecutionService', () => {
           provide: 'ExchangeClient',
           useValue: mockExchangeClient,
         },
+        {
+          provide: 'NotificationService',
+          useValue: {
+            send: jest.fn(),
+          },
+        },
       ],
     }).compile();
 

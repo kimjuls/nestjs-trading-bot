@@ -75,40 +75,71 @@ export class BacktestEngine {
       const currentCandle = candles[i];
       const signal = await strategy.analyze(window);
 
+      // Handle Signals & Position Management
       const currentPos = this.positionManager.getCurrentPosition();
+      let trade: BacktestTrade | null = null;
+      let reason = '';
 
-      // Handle Entries
-      if (signal.action === TradingAction.EnterLong && !currentPos) {
-        this.positionManager.openPosition(
-          'LONG',
-          currentCandle,
-          this.positionManager.getCurrentBalance(),
-        ); // Full Invest for simple test
-      } else if (signal.action === TradingAction.EnterShort && !currentPos) {
-        // Short logic if supported
-        // this.positionManager.openPosition('SHORT', currentCandle, ...);
-      }
-
-      // Handle Exits
+      // 1. Check for Exits / Reversals first
       if (currentPos) {
         let shouldExit = false;
-        let reason = '';
 
+        // Explicit Exit Signals
         if (
           currentPos.side === 'LONG' &&
           signal.action === TradingAction.ExitLong
         ) {
           shouldExit = true;
-          reason = 'Signal Exit';
+          reason = 'Signal Exit (ExitLong)';
+        } else if (
+          currentPos.side === 'SHORT' &&
+          signal.action === TradingAction.ExitShort
+        ) {
+          shouldExit = true;
+          reason = 'Signal Exit (ExitShort)';
         }
-        // Add SL/TP logic here if needed or if part of Strategy logic returning Exit signal
+
+        // Reversal Signals
+        if (!shouldExit) {
+          if (
+            currentPos.side === 'LONG' &&
+            signal.action === TradingAction.EnterShort
+          ) {
+            shouldExit = true;
+            reason = 'Reversal (EnterShort)';
+          } else if (
+            currentPos.side === 'SHORT' &&
+            signal.action === TradingAction.EnterLong
+          ) {
+            shouldExit = true;
+            reason = 'Reversal (EnterLong)';
+          }
+        }
 
         if (shouldExit) {
-          const trade = this.positionManager.closePosition(
-            currentCandle,
-            reason,
-          );
+          trade = this.positionManager.closePosition(currentCandle, reason);
           trades.push(trade);
+        }
+      }
+
+      // 2. Check for Entries (only if no position exists, or we just closed one)
+      // Note: If we just reversed, trade is not null, but currentPos is now null (in manager).
+      // We need to fetch currentPos again or trust that manager.getCurrentPosition() is null.
+      const updatedPos = this.positionManager.getCurrentPosition();
+
+      if (!updatedPos) {
+        if (signal.action === TradingAction.EnterLong) {
+          this.positionManager.openPosition(
+            'LONG',
+            currentCandle,
+            this.positionManager.getCurrentBalance(),
+          );
+        } else if (signal.action === TradingAction.EnterShort) {
+          this.positionManager.openPosition(
+            'SHORT',
+            currentCandle,
+            this.positionManager.getCurrentBalance(),
+          );
         }
       }
 
@@ -184,7 +215,10 @@ export class BacktestEngine {
       equityCurve[equityCurve.length - 1].balance - config.initialCapital;
     const totalPnlPercent = (totalPnl / config.initialCapital) * 100;
 
-    const maxDrawdown = Math.max(...equityCurve.map((p) => p.drawdownPercent));
+    const maxDrawdown = equityCurve.reduce(
+      (max, p) => Math.max(max, p.drawdownPercent),
+      0,
+    );
 
     const wins = trades.filter((t) => t.pnl > 0).map((t) => t.pnl);
     const losses = trades.filter((t) => t.pnl <= 0).map((t) => t.pnl);

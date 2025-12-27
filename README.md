@@ -47,6 +47,10 @@ pnpm install --frozen-lockfile
 # 예시 .env 파일 내용
 BINANCE_API_KEY=your_api_key
 BINANCE_SECRET_KEY=your_secret_key
+
+# Strategy Configuration
+# TRADING_STRATEGY: Strategy to use (MACD_HISTOGRAM or MACD_RSI, default: MACD_HISTOGRAM)
+# RISK_REWARD_TO_RISK_RATIO: Reward-to-Risk ratio (default: 1.5)
 # ... 기타 설정
 ```
 
@@ -61,10 +65,11 @@ BINANCE_SECRET_KEY=your_secret_key
 pnpm run backtest
 
 # 커스텀 설정으로 실행
-BACKTEST_SYMBOL=ETHUSDT \
+BACKTEST_SYMBOL=BTCUSDT \
 BACKTEST_INTERVAL=1h \
-BACKTEST_START_DATE=2024-01-01 \
-BACKTEST_END_DATE=2024-06-01 \
+BACKTEST_START_DATE=2025-01-01 \
+BACKTEST_END_DATE=2025-12-01 \
+TRADING_STRATEGY=MACD_HISTOGRAM \
 pnpm run backtest
 ```
 

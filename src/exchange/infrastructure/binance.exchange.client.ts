@@ -21,6 +21,7 @@ export class BinanceExchangeClient implements ExchangeClient {
   constructor(private configService: ConfigService) {
     const apiKey = this.configService.get<string>('BINANCE_API_KEY');
     const apiSecret = this.configService.get<string>('BINANCE_API_SECRET');
+    const baseUrl = this.configService.get<string>('BINANCE_BASE_URL');
     if (!apiKey || !apiSecret) {
       throw new Error('Binance API Key or Secret not found.');
     }
@@ -28,6 +29,7 @@ export class BinanceExchangeClient implements ExchangeClient {
     this.client = new USDMClient({
       api_key: apiKey,
       api_secret: apiSecret,
+      baseUrl,
     });
   }
 

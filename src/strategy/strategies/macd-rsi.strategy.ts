@@ -20,6 +20,8 @@ export class MacdRsiStrategy implements TradeStrategy {
   private macd: MACD;
   private rsi: RSI;
   private lastProcessedTime = 0;
+  private macdResults: any[] = [];
+  private rsiResults: number[] = [];
 
   async onInit(): Promise<void> {
     this.macd = new MACD({
@@ -31,6 +33,8 @@ export class MacdRsiStrategy implements TradeStrategy {
       ...this.rsiInput,
     });
     this.lastProcessedTime = 0;
+    this.macdResults = [];
+    this.rsiResults = [];
   }
 
   async analyze(candles: Candle[]): Promise<TradingSignal> {
@@ -46,31 +50,31 @@ export class MacdRsiStrategy implements TradeStrategy {
 
     if (newCandles.length > 0) {
       for (const candle of newCandles) {
-        this.macd.nextValue(candle.close);
-        this.rsi.nextValue(candle.close);
+        const mVal = this.macd.nextValue(candle.close);
+        if (mVal) this.macdResults.push(mVal);
+
+        const rVal = this.rsi.nextValue(candle.close);
+        if (rVal !== undefined) this.rsiResults.push(rVal);
       }
       this.lastProcessedTime = newCandles[newCandles.length - 1].timestamp;
     }
 
     const latestCandle = candles[candles.length - 1];
 
-    // Need enough data
-    // MACD result might be undefined initially
-    // We can access results via this.macd.getResult() which might return the full array?
-    // No, technicalindicators usually stores result.
-    // Actually, checking library behavior: classes usually behave as streams but 'getResult()' isn't always standard or efficient if it returns full array.
-    // But usually we just need the LAST result.
-    // Warning: `technicalindicators` stateful classes store result in `result` property (array).
-    // Accessing the last element of the array is O(1).
-
-    const macdResults = this.macd.getResult();
-    const rsiResults = this.rsi.getResult();
+    const macdResults = this.macdResults;
+    const rsiResults = this.rsiResults;
 
     const lastIndex = macdResults.length - 1;
     const prevIndex = macdResults.length - 2;
 
+    let signal: TradingSignal = {
+      action: TradingAction.Hold,
+      price: latestCandle.close,
+      timestamp: latestCandle.timestamp,
+    };
+
     if (lastIndex < 1 || rsiResults.length < 1) {
-      return this.createSignal(TradingAction.Hold, latestCandle);
+      return signal;
     }
 
     const currentMacd = macdResults[lastIndex];
@@ -78,14 +82,12 @@ export class MacdRsiStrategy implements TradeStrategy {
     const currentRsi = rsiResults[rsiResults.length - 1];
 
     if (
-      !currentMacd ||
-      !prevMacd ||
-      currentMacd.MACD === undefined ||
-      currentMacd.signal === undefined ||
-      prevMacd.MACD === undefined ||
-      prevMacd.signal === undefined
+      currentMacd?.MACD === undefined ||
+      currentMacd?.signal === undefined ||
+      prevMacd?.MACD === undefined ||
+      prevMacd?.signal === undefined
     ) {
-      return this.createSignal(TradingAction.Hold, latestCandle);
+      return signal;
     }
 
     // Check Crossovers
@@ -97,60 +99,48 @@ export class MacdRsiStrategy implements TradeStrategy {
     const isDeadCross =
       prevMacd.MACD >= prevMacd.signal && currentMacd.MACD < currentMacd.signal;
 
-    // Logic 1: Long Entry
-    // MACD Golden Cross AND RSI < 70
-    if (isGoldenCross && currentRsi < 70) {
-      return this.createSignal(TradingAction.EnterLong, latestCandle, {
-        reason: 'MACD Golden Cross + RSI < 70',
-        macd: currentMacd,
-        rsi: currentRsi,
-      });
-    }
-
-    // Logic 2: Short Entry
-    // MACD Dead Cross AND RSI > 30
-    if (isDeadCross && currentRsi > 30) {
-      return this.createSignal(TradingAction.EnterShort, latestCandle, {
-        reason: 'MACD Dead Cross + RSI > 30',
-        macd: currentMacd,
-        rsi: currentRsi,
-      });
-    }
-
-    // Logic 3: Long Exit
-    if (isDeadCross) {
-      return this.createSignal(TradingAction.ExitLong, latestCandle, {
-        reason: 'MACD Dead Cross',
-        macd: currentMacd,
-        rsi: currentRsi,
-      });
-    }
-
-    // Logic 4: Short Exit
     if (isGoldenCross) {
-      return this.createSignal(TradingAction.ExitShort, latestCandle, {
-        reason: 'MACD Golden Cross',
-        macd: currentMacd,
-        rsi: currentRsi,
-      });
+      // Logic 1: Long Entry (Takes precedence)
+      // MACD Golden Cross AND RSI < 70
+      if (currentRsi < 70) {
+        signal.action = TradingAction.EnterLong;
+        signal.metadata = {
+          reason: 'MACD Golden Cross + RSI < 70',
+          macd: currentMacd,
+          rsi: currentRsi,
+        };
+      } else {
+        // Logic 4: Short Exit
+        // MACD Golden Cross (implied RSI >= 70 or just Golden Cross in general if we were Short)
+        signal.action = TradingAction.ExitShort;
+        signal.metadata = {
+          reason: 'MACD Golden Cross',
+          macd: currentMacd,
+          rsi: currentRsi,
+        };
+      }
+    } else if (isDeadCross) {
+      // Logic 2: Short Entry (Takes precedence)
+      // MACD Dead Cross AND RSI > 30
+      if (currentRsi > 30) {
+        signal.action = TradingAction.EnterShort;
+        signal.metadata = {
+          reason: 'MACD Dead Cross + RSI > 30',
+          macd: currentMacd,
+          rsi: currentRsi,
+        };
+      } else {
+        // Logic 3: Long Exit
+        // MACD Dead Cross
+        signal.action = TradingAction.ExitLong;
+        signal.metadata = {
+          reason: 'MACD Dead Cross',
+          macd: currentMacd,
+          rsi: currentRsi,
+        };
+      }
     }
 
-    return this.createSignal(TradingAction.Hold, latestCandle, {
-      macd: currentMacd,
-      rsi: currentRsi,
-    });
-  }
-
-  private createSignal(
-    action: TradingAction,
-    candle: Candle,
-    metadata?: Record<string, any>,
-  ): TradingSignal {
-    return {
-      action,
-      price: candle.close,
-      timestamp: candle.timestamp,
-      metadata,
-    };
+    return signal;
   }
 }

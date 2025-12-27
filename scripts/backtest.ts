@@ -5,21 +5,13 @@ import { BacktestEngine } from '../src/backtest/application/backtest.engine';
 import { BacktestConfig } from '../src/backtest/domain/backtest.config';
 import { MacdRsiStrategy } from '../src/strategy/strategies/macd-rsi.strategy';
 
+import { MacdHistogramStrategy } from '../src/strategy/strategies/macd-histogram.strategy';
+
 async function bootstrap() {
   console.log('Initializing Backtest Application...');
 
-  // We need to import Strategy Module or provide Strategy here if it's not in BacktestModule
-  // For simplicity, we manually instantiate strategy or pull from a StrategyModule if existed.
-  // The MacdRsiStrategy might need dependencies.
-  // Let's create a temporary app context with ConfigModule to ensure env vars are loaded.
-
   const app = await NestFactory.createApplicationContext(BacktestModule);
   const configService = app.get(ConfigService);
-  // Note: MacdRsiStrategy might not be provided in BacktestModule.
-  // We can manually instantiate it if it has no complex deps or add it to BacktestModule imports/providers dynamically or statically.
-  // Simplest is generic: instantiate strategy manually if it's simple.
-  // MacdRsiStrategy probably needs ConfigService if it has params.
-
   const engine = app.get(BacktestEngine);
 
   // Start Date: 1 month ago
@@ -47,11 +39,18 @@ async function bootstrap() {
     `Period: ${config.startDate.toISOString()} ~ ${config.endDate.toISOString()}`,
   );
 
-  // Instantiate Strategy
-  // If strategy needs DI, we should have it in a module.
-  // Let's assume MacdRsiStrategy is simple for now or use a mock/simple one if connection fails.
-  // Ideally, valid strategies should be in the StrategyModule and we import that.
-  const strategy: any = new MacdRsiStrategy();
+  // Instantiate Strategy based on Env
+  const strategyName = configService.get<string>('TRADING_STRATEGY');
+  let strategy: any;
+
+  if (strategyName === 'MACD_RSI') {
+    console.log('Using Strategy: MACD_RSI');
+    strategy = new MacdRsiStrategy();
+  } else {
+    console.log('Using Strategy: MACD_HISTOGRAM (Default)');
+    strategy = new MacdHistogramStrategy();
+  }
+
   if (strategy.onInit) await strategy.onInit();
 
   try {

@@ -11,6 +11,8 @@ const mockConfigService = {
         return 'test-api-key';
       case 'BINANCE_API_SECRET':
         return 'test-api-secret';
+      case 'BINANCE_BASE_URL':
+        return 'https://testnet.binancefuture.com';
       default:
         return null;
     }

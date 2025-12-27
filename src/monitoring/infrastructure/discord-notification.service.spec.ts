@@ -73,10 +73,10 @@ describe('DiscordNotificationService', () => {
       expect(logSpy).toHaveBeenCalledWith(
         expect.stringContaining('Risk Config Loaded'),
       );
-      expect(mockFetch).toHaveBeenCalledTimes(2); // Startup Msg + Risk Info Msg
+      expect(mockFetch).toHaveBeenCalledTimes(1); // Risk Info Msg
 
       // Check Risk Info Msg
-      const callArgs = mockFetch.mock.calls[1];
+      const callArgs = mockFetch.mock.calls[0];
       const body = JSON.parse(callArgs[1].body);
       expect(body.embeds[0].title).toContain('Risk Configuration Applied');
       expect(body.embeds[0].fields).toContainEqual(

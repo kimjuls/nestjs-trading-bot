@@ -3,9 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BacktestModule } from '../src/backtest/backtest.module';
 import { BacktestEngine } from '../src/backtest/application/backtest.engine';
 import { BacktestConfig } from '../src/backtest/domain/backtest.config';
-import { MacdRsiStrategy } from '../src/strategy/strategies/macd-rsi.strategy';
-
-import { MacdHistogramStrategy } from '../src/strategy/strategies/macd-histogram.strategy';
+import { StrategyFactory } from '../src/strategy/application/strategy.factory';
 
 async function bootstrap() {
   console.log('Initializing Backtest Application...');
@@ -40,16 +38,12 @@ async function bootstrap() {
   );
 
   // Instantiate Strategy based on Env
-  const strategyName = configService.get<string>('TRADING_STRATEGY');
-  let strategy: any;
+  const strategyFactory = app.get(StrategyFactory);
+  const strategyName =
+    configService.get<string>('TRADING_STRATEGY') || 'MACD_HISTOGRAM';
 
-  if (strategyName === 'MACD_RSI') {
-    console.log('Using Strategy: MACD_RSI');
-    strategy = new MacdRsiStrategy();
-  } else {
-    console.log('Using Strategy: MACD_HISTOGRAM (Default)');
-    strategy = new MacdHistogramStrategy();
-  }
+  console.log(`Using Strategy: ${strategyName}`);
+  const strategy = strategyFactory.getStrategy(strategyName);
 
   if (strategy.onInit) await strategy.onInit();
 

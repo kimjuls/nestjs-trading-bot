@@ -3,31 +3,22 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ExchangeModule } from '../exchange/exchange.module';
 import { RiskModule } from '../risk/risk.module';
 import { ExecutionModule } from '../execution/execution.module';
-import { MacdHistogramStrategy } from './strategies/macd-histogram.strategy';
-import { MacdRsiStrategy } from './strategies/macd-rsi.strategy';
+import { StrategyFactory } from './application/strategy.factory';
 
 @Module({
   imports: [ConfigModule, ExchangeModule, RiskModule, ExecutionModule],
   providers: [
-    MacdHistogramStrategy,
-    MacdRsiStrategy,
+    StrategyFactory,
     {
       provide: 'TradeStrategy',
-      inject: [ConfigService, MacdHistogramStrategy, MacdRsiStrategy],
-      useFactory: (
-        config: ConfigService,
-        macdHistogram: MacdHistogramStrategy,
-        macdRsi: MacdRsiStrategy,
-      ) => {
-        const strategyName = config.get<string>('TRADING_STRATEGY');
-        if (strategyName === 'MACD_RSI') {
-          return macdRsi;
-        }
-        // Default to Histogram if not specified or specified as MACD_HISTOGRAM
-        return macdHistogram;
+      inject: [ConfigService, StrategyFactory],
+      useFactory: (config: ConfigService, strategyFactory: StrategyFactory) => {
+        const strategyName =
+          config.get<string>('TRADING_STRATEGY') || 'MACD_HISTOGRAM';
+        return strategyFactory.getStrategy(strategyName);
       },
     },
   ],
-  exports: ['TradeStrategy'],
+  exports: ['TradeStrategy', StrategyFactory],
 })
 export class StrategyModule {}
